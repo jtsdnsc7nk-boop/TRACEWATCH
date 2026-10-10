@@ -66,7 +66,7 @@ Copy `.env.example` to `.env.local` (the start scripts do this for you). Every k
 - `HIBP_API_KEY` adds Have I Been Pwned account search.
 - `DISCORD_BOT_TOKEN` makes Discord lookups go straight to Discord.
 - `TRACEWATCH_UPDATE_CHECK=off` disables the update check.
-- `TRACEWATCH_DISABLE_CLI_LAUNCH=1` hides nothing but makes the Open CLI button refuse to open windows.
+- `TRACEWATCH_DISABLE_CLI_LAUNCH=1` stops the Open CLI button from opening terminal windows.
 
 ## Updates
 

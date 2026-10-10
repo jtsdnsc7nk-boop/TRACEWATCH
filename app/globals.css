@@ -1,0 +1,195 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0b0b0c;
+  --foreground: #ededed;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+::selection {
+  background: rgb(255 255 255 / 0.85);
+  color: #0b0b0c;
+}
+
+/* ---------- Animated backdrop ---------- */
+
+.tw-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  will-change: transform;
+}
+
+.tw-blob-a {
+  width: 62vmax;
+  height: 62vmax;
+  left: -18vmax;
+  top: -14vmax;
+  background: radial-gradient(circle at 45% 45%, rgb(160 160 160 / 0.55), transparent 65%);
+  animation: tw-drift-a 28s ease-in-out infinite alternate;
+}
+
+.tw-blob-b {
+  width: 55vmax;
+  height: 55vmax;
+  right: -20vmax;
+  bottom: -26vmax;
+  background: radial-gradient(circle at 50% 50%, rgb(130 130 130 / 0.45), transparent 65%);
+  animation: tw-drift-b 34s ease-in-out infinite alternate;
+}
+
+.tw-blob-c {
+  width: 45vmax;
+  height: 45vmax;
+  left: 10vmax;
+  bottom: -30vmax;
+  background: radial-gradient(circle at 50% 50%, rgb(110 110 110 / 0.4), transparent 65%);
+  animation: tw-drift-c 40s ease-in-out infinite alternate;
+}
+
+.tw-orb {
+  position: absolute;
+  width: 115vmax;
+  height: 115vmax;
+  left: 36vw;
+  top: -62vmax;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 70%, #2a2a2b 0%, #161617 42%, #0d0d0e 72%);
+  box-shadow:
+    inset 26px -18px 50px -24px rgb(255 255 255 / 0.28),
+    inset 70px -40px 140px -60px rgb(255 255 255 / 0.12),
+    -60px 60px 160px rgb(0 0 0 / 0.65);
+  animation: tw-orb 46s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.tw-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 40%, transparent 35%, rgb(0 0 0 / 0.7) 100%);
+}
+
+.tw-grain {
+  position: absolute;
+  inset: -50%;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  opacity: 0.09;
+  mix-blend-mode: overlay;
+  animation: tw-grain 1.2s steps(6) infinite;
+}
+
+@keyframes tw-drift-a {
+  to {
+    transform: translate3d(12vw, 10vh, 0) scale(1.12);
+  }
+}
+
+@keyframes tw-drift-b {
+  to {
+    transform: translate3d(-14vw, -12vh, 0) scale(0.9);
+  }
+}
+
+@keyframes tw-drift-c {
+  to {
+    transform: translate3d(18vw, -8vh, 0) scale(1.15);
+  }
+}
+
+@keyframes tw-orb {
+  to {
+    transform: translate3d(-4vw, 3vh, 0) rotate(-6deg);
+  }
+}
+
+@keyframes tw-grain {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-6%, 4%); }
+  40% { transform: translate(5%, -7%); }
+  60% { transform: translate(-3%, 8%); }
+  80% { transform: translate(7%, 2%); }
+  100% { transform: translate(-4%, -5%); }
+}
+
+/* Hero hands: adapted from Michelangelo's The Creation of Adam (public domain). */
+.tw-hand {
+  position: absolute;
+  top: 50%;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+}
+
+.tw-hand-left {
+  left: -3vw;
+  width: clamp(280px, 30vw, 560px);
+  aspect-ratio: 900 / 438;
+  background-image: url("/hands/hand-left-dots.webp");
+  background-position: left center;
+  opacity: 0.8;
+  animation: tw-reach-right 7s ease-in-out infinite alternate;
+}
+
+.tw-hand-right {
+  right: -5vw;
+  width: clamp(320px, 34vw, 640px);
+  aspect-ratio: 1000 / 468;
+  background-image: url("/hands/hand-right.webp");
+  background-position: right center;
+  animation: tw-reach-left 7s ease-in-out infinite alternate;
+}
+
+@keyframes tw-reach-right {
+  from {
+    transform: translate3d(-10px, -50%, 0);
+  }
+  to {
+    transform: translate3d(14px, calc(-50% - 6px), 0);
+  }
+}
+
+@keyframes tw-reach-left {
+  from {
+    transform: translate3d(10px, -42%, 0);
+  }
+  to {
+    transform: translate3d(-14px, calc(-42% + 6px), 0);
+  }
+}
+
+/* Live indicator */
+.tw-pulse {
+  animation: tw-pulse 2s ease-in-out infinite;
+}
+
+@keyframes tw-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -50,7 +50,10 @@ const RISK_LABELS = { none: "CLEAR", low: "LOW", moderate: "MODERATE", high: "HI
 const LOGO_RAMP = [255, 255, 254, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 243, 242, 241, 240];
 const NOISE = "░▒▓▚▞▖▗▘▝▙▟";
 
-const width = () => Math.min(out.columns || 80, 100);
+const columns = () => out.columns || 80;
+const width = () => Math.min(columns(), 100);
+// Lines that are redrawn in place must never wrap, or each redraw would land on a new line.
+const fit = (text, max) => (max <= 1 ? "" : text.length > max ? `${text.slice(0, max - 1)}…` : text);
 const pad = (visible) => " ".repeat(Math.max(0, Math.floor((width() - visible) / 2)));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const number = (value) => new Intl.NumberFormat("en-US").format(value);
@@ -182,8 +185,9 @@ function spinner(label) {
       const level = (Math.sin((i - frame * 0.6) / 1.8) + 1) / 2;
       wave += grey(240 + Math.round(level * 15))(bars[Math.round(level * (bars.length - 1))]);
     }
-    const seconds = ((Date.now() - started) / 1000).toFixed(1);
-    out.write(`\r\x1b[2K  ${wave}  ${muted(label)} ${faint(`${seconds}s`)}`);
+    const seconds = `${((Date.now() - started) / 1000).toFixed(1)}s`;
+    const room = columns() - 2 - 14 - 2 - 1 - seconds.length - 1;
+    out.write(`\r\x1b[2K  ${wave}  ${muted(fit(label, room))} ${faint(seconds)}`);
     frame += 1;
   };
   draw();
@@ -195,14 +199,16 @@ function spinner(label) {
   };
 }
 
+const riskBarSize = () => Math.max(8, Math.min(24, columns() - 22));
+
 function riskBarText(score, level, filledCells) {
-  const size = 24;
+  const size = riskBarSize();
   const color = RISK_COLORS[level] ?? white;
   return `${color("█".repeat(filledCells))}${faint("░".repeat(size - filledCells))}  ${bold(color(`${score}/100 ${RISK_LABELS[level] ?? ""}`))}`;
 }
 
 async function drawRiskBar(risk) {
-  const target = Math.round((risk.score / 100) * 24);
+  const target = Math.round((risk.score / 100) * riskBarSize());
   if (!animate) {
     out.write(`  ${riskBarText(risk.score, risk.level, target)}\n`);
     return;
@@ -395,11 +401,14 @@ const MENU = [
 function menuLine(item, index, active) {
   const label = `${index + 1}  ${item.label.padEnd(18)}`;
   const pointer = active ? white("❯") : " ";
-  return `\x1b[2K ${pointer} ${active ? inverse(white(` ${label} `)) : ` ${muted(label)} `} ${active ? muted(item.hint) : faint(item.hint)}`;
+  // " ❯ " + " label " + " " takes label.length + 6 columns; the hint gets whatever is left, or nothing.
+  const room = columns() - label.length - 7;
+  const hint = room >= 12 ? fit(item.hint, room) : "";
+  return `\x1b[2K ${pointer} ${active ? inverse(white(` ${label} `)) : ` ${muted(label)} `} ${active ? muted(hint) : faint(hint)}`;
 }
 
 async function menu({ cascade = false } = {}) {
-  write(`  ${muted("WHAT DO YOU WANT TO SEARCH?")}  ${faint("↑/↓ or 1-8, Enter to choose")}`);
+  write(`  ${muted("WHAT DO YOU WANT TO SEARCH?")}${columns() >= 62 ? `  ${faint("↑/↓ or 1-8, Enter to choose")}` : ""}`);
   write();
   if (!interactive) {
     MENU.forEach((item, index) => write(`  ${index + 1}. ${item.label}`));

@@ -2,6 +2,20 @@
   "repository": "https://github.com/jtsdnsc7nk-boop/TRACEWATCH",
   "releases": [
     {
+      "version": "0.3.1",
+      "date": "2026-10-10",
+      "title": "4K wallpapers",
+      "changes": [
+        "Three free 4K wallpapers made from the TraceWatch background: the cat between the hands, hands only, and a clean version.",
+        "Grab them from the v0.3.0 GitHub release or the wallpapers folder in the repository.",
+        "Release notes in the app can now include a download button, like the one below."
+      ],
+      "link": {
+        "label": "Download wallpapers",
+        "url": "https://github.com/jtsdnsc7nk-boop/TRACEWATCH/releases/tag/v0.3.0"
+      }
+    },
+    {
       "version": "0.3.0",
       "date": "2026-10-10",
       "title": "One-command setup and update alerts",

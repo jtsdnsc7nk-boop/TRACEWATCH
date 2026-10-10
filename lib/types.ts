@@ -194,6 +194,8 @@ export interface Release {
   date: string;
   title: string;
   changes: string[];
+  /** Optional call to action shown with the release, e.g. a download. Only https links are honoured. */
+  link?: { label: string; url: string };
 }
 
 export interface UpdateStatus {

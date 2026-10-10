@@ -58,9 +58,16 @@ contains nothing you searched; it does tell GitHub your server's IP address. Tur
 
 ### Publishing a release (maintainers)
 
-1. Add an entry at the **top** of `changelog.json` (`version`, `date`, `title`, `changes`).
+1. Add an entry at the **top** of `changelog.json` with `version`, `date`, `title` and `changes`. An optional
+   `"link": { "label": "...", "url": "https://..." }` adds a button to the in-app notes.
 2. Set the same `version` in `package.json`.
-3. Commit and push to `main`. Every running instance shows the update notice within 30 minutes.
+3. Commit and push to `main`. Every running instance shows the update notice within about 30 minutes.
+4. Optionally tag it and publish a GitHub release, attaching any files:
+
+   ```bash
+   git tag -a v0.3.1 -m "TraceWatch 0.3.1" && git push origin v0.3.1
+   gh release create v0.3.1 --title "TraceWatch v0.3.1" --notes "What changed..."
+   ```
 
 ## Scanners
 

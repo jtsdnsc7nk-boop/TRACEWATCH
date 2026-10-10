@@ -1,6 +1,6 @@
 {
   "name": "tracewatch",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Zero-persistence, self-hosted OSINT console for breach, account and username exposure.",
   "license": "AGPL-3.0-only",
   "private": true,

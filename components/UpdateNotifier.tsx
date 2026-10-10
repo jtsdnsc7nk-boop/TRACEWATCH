@@ -116,12 +116,12 @@ export function UpdateNotifier() {
                 {showSteps ? "Hide steps" : "How to update"}
               </button>
               <a
-                href={status.repository}
+                href={update.link?.url ?? status.repository}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 rounded-full border border-white/15 px-3.5 py-1.5 text-[10px] uppercase tracking-[0.18em] text-neutral-300 transition hover:border-white/35 hover:text-white"
               >
-                GitHub
+                {update.link?.label ?? "GitHub"}
                 <ExternalLink className="size-3" aria-hidden />
               </a>
               <span className="ml-auto font-mono text-[10px] text-neutral-600">you run v{status.current}</span>
@@ -183,6 +183,17 @@ export function UpdateNotifier() {
                         </li>
                       ))}
                     </ul>
+                    {release.link ? (
+                      <a
+                        href={release.link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-3.5 py-1.5 text-[10px] uppercase tracking-[0.18em] text-neutral-200 transition hover:border-white/35 hover:text-white"
+                      >
+                        {release.link.label}
+                        <ExternalLink className="size-3" aria-hidden />
+                      </a>
+                    ) : null}
                   </section>
                 ))}
               </div>

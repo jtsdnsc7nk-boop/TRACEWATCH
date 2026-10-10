@@ -30,6 +30,26 @@ function updateCheckEnabled(): boolean {
 
 let remoteCache: { expiresAt: number; latest: Release | null } | null = null;
 
+/** Remote release notes are untrusted input: keep only well-formed text and https links. */
+function sanitizeRelease(raw: unknown): Release | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Record<string, unknown>;
+  if (typeof value.version !== "string" || !/^\d+(\.\d+){0,3}$/.test(value.version)) return null;
+  const text = (input: unknown, max: number) => (typeof input === "string" ? input.slice(0, max) : "");
+  const changes = Array.isArray(value.changes)
+    ? value.changes.filter((change): change is string => typeof change === "string").slice(0, 20).map((c) => c.slice(0, 300))
+    : [];
+  const link = value.link as { label?: unknown; url?: unknown } | undefined;
+  const linkUrl = typeof link?.url === "string" && /^https:\/\/[^\s]+$/.test(link.url) ? link.url : null;
+  return {
+    version: value.version,
+    date: text(value.date, 20),
+    title: text(value.title, 120) || `Version ${value.version}`,
+    changes,
+    ...(linkUrl ? { link: { label: text(link?.label, 40) || "Learn more", url: linkUrl } } : {}),
+  };
+}
+
 async function fetchLatestRelease(): Promise<Release | null> {
   const now = Date.now();
   if (remoteCache && remoteCache.expiresAt > now) return remoteCache.latest;
@@ -39,13 +59,12 @@ async function fetchLatestRelease(): Promise<Release | null> {
       headers: { "User-Agent": USER_AGENT },
     });
     if (response.ok) {
-      const data = (await response.json()) as { releases?: Release[] };
-      const releases = Array.isArray(data.releases) ? data.releases : [];
+      const data = (await response.json()) as { releases?: unknown[] };
+      const releases = (Array.isArray(data.releases) ? data.releases : [])
+        .map(sanitizeRelease)
+        .filter((release): release is Release => release !== null);
       latest = releases.reduce<Release | null>(
-        (best, release) =>
-          typeof release?.version === "string" && (!best || compareVersions(release.version, best.version) > 0)
-            ? release
-            : best,
+        (best, release) => (!best || compareVersions(release.version, best.version) > 0 ? release : best),
         null,
       );
     }

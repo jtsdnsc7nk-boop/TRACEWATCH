@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.tracewatch
+.claude
+.env*
+!.env.example
+*.tsbuildinfo
+Dockerfile
+compose.yaml

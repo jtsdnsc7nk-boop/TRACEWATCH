@@ -42,3 +42,6 @@ next-env.d.ts
 
 # keep the documented template
 !.env.example
+
+# local instance state (acknowledged release notes)
+/.tracewatch/

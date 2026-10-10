@@ -1,0 +1,36 @@
+{
+  "repository": "https://github.com/jtsdnsc7nk-boop/TRACEWATCH",
+  "releases": [
+    {
+      "version": "0.3.0",
+      "date": "2026-10-10",
+      "title": "One-command setup and update alerts",
+      "changes": [
+        "Start TraceWatch with one command on Windows, macOS and Linux, or with Docker.",
+        "Your instance now tells you when a new version is on GitHub, and shows what changed after you update.",
+        "Released under the GNU AGPL-3.0 open-source license."
+      ]
+    },
+    {
+      "version": "0.2.0",
+      "date": "2026-10-10",
+      "title": "Username search",
+      "changes": [
+        "New Username tab checks 42 social, developer, gaming, creative and community sites for a public profile.",
+        "Every site detector is verified against real and missing names; blocked or odd answers show as unknown, never as found.",
+        "Discord avatars and banners are streamed through TraceWatch so your browser never caches them."
+      ]
+    },
+    {
+      "version": "0.1.0",
+      "date": "2026-10-10",
+      "title": "First release",
+      "changes": [
+        "Email breach search merged across XposedOrNot, LeakCheck and Hudson Rock infostealer logs, with optional Have I Been Pwned.",
+        "Password, phone and Discord account checks.",
+        "Searchable catalogue of every known breach and a no-login dashboard.",
+        "No cookies, no storage: leave the page and everything you searched is gone."
+      ]
+    }
+  ]
+}

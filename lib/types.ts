@@ -189,6 +189,23 @@ export interface StatusResult {
   checkedAt: string;
 }
 
+export interface Release {
+  version: string;
+  date: string;
+  title: string;
+  changes: string[];
+}
+
+export interface UpdateStatus {
+  current: string;
+  repository: string;
+  /** Newest release published on GitHub, when it is newer than this instance. */
+  update: Release | null;
+  /** Releases installed since the operator last acknowledged the "what's new" popup. */
+  whatsNew: Release[];
+  checkEnabled: boolean;
+}
+
 export interface ApiError {
   error: string;
 }

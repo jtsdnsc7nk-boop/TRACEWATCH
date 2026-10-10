@@ -1,12 +1,23 @@
 {
   "name": "tracewatch",
-  "version": "0.1.0",
+  "version": "0.3.0",
+  "description": "Zero-persistence, self-hosted OSINT console for breach, account and username exposure.",
+  "license": "AGPL-3.0-only",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jtsdnsc7nk-boop/TRACEWATCH.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "setup": "node scripts/tracewatch.mjs start",
+    "update": "node scripts/tracewatch.mjs update"
   },
   "dependencies": {
     "clsx": "^2.1.1",

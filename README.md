@@ -1,6 +1,64 @@
 # TraceWatch
 
-Zero-persistence breach and account exposure console built on Next.js 15 (App Router), TypeScript and Tailwind 4.
+A self-hosted, zero-persistence OSINT console: see which breaches, infostealer logs and websites expose an email
+address or username, check passwords safely, and inspect phone numbers and Discord accounts. It runs on your own
+machine, needs no account, sets no cookies, and forgets everything when you leave the page.
+
+## Quick start
+
+You need [Node.js 20+](https://nodejs.org) and, for updates, [git](https://git-scm.com).
+
+```bash
+git clone https://github.com/jtsdnsc7nk-boop/TRACEWATCH.git
+```
+
+Then, in the `TRACEWATCH` folder:
+
+| System | Start | Update to the latest version |
+| --- | --- | --- |
+| Windows | double-click `start.bat` (or run it in a terminal) | `start.bat update` |
+| macOS / Linux | `./start.sh` | `./start.sh update` |
+| Any, with npm | `npm run setup` | `npm run update` |
+
+The first run installs dependencies and builds the app (a minute or two), then opens
+[http://localhost:3000](http://localhost:3000) in your browser. Later runs start in seconds and only rebuild after
+an update. Options: `--port 4000`, `--host 0.0.0.0` (expose on your network; the default is this machine only),
+`--rebuild`, `--no-open`.
+
+No Node.js on Windows? `winget install OpenJS.NodeJS.LTS`. On macOS: `brew install node`.
+
+### Docker
+
+```bash
+docker compose up -d          # start: http://localhost:3000
+git pull && docker compose up -d --build   # update
+```
+
+The container runs as a non-root user and is published on `127.0.0.1` only; edit `compose.yaml` to expose it.
+
+### Optional keys
+
+Copy `.env.example` to `.env.local` (the start scripts do this for you). Every key is optional:
+
+- `HIBP_API_KEY` adds Have I Been Pwned account search.
+- `DISCORD_BOT_TOKEN` makes Discord lookups go straight to Discord.
+- `TRACEWATCH_UPDATE_CHECK=off` disables the update check.
+
+## Updates
+
+When a newer version is published on GitHub, a notice with the TraceWatch cat appears in the corner of the app:
+**NEW UPDATE pull from GitHub!** with the exact update command for your setup. After you update and restart, a
+**What's changed** dialog lists every release since the version you last saw.
+
+The server checks `changelog.json` on the repository's `main` branch at most every 30 minutes. That request
+contains nothing you searched; it does tell GitHub your server's IP address. Turn it off with
+`TRACEWATCH_UPDATE_CHECK=off`.
+
+### Publishing a release (maintainers)
+
+1. Add an entry at the **top** of `changelog.json` (`version`, `date`, `title`, `changes`).
+2. Set the same `version` in `package.json`.
+3. Commit and push to `main`. Every running instance shows the update notice within 30 minutes.
 
 ## Scanners
 
@@ -19,13 +77,12 @@ Zero-persistence breach and account exposure console built on Next.js 15 (App Ro
 data types, the largest and most recent breaches, live health of every upstream source, and the scans run in the
 current tab. Session activity lives in React state only, shows masked targets, and is gone on reload.
 
-## Run
+## Development
 
 ```bash
+npm install
 npm run dev
 ```
-
-Both keys in `.env.local` are optional.
 
 ## Persistence model
 
@@ -40,6 +97,8 @@ Leave the page and nothing remains. Verified against a production build (`next b
 - **No server logs or storage.** Queried values are not logged. The only server memory is a per-client rate-limit
   counter and a one-hour cache of the public breach catalogue.
 - **Session activity** on the dashboard is React state only (masked targets) and is gone on reload.
+- **One file on disk:** `.tracewatch/state.json` holds the last release-notes version the operator dismissed
+  (for example `{"acknowledgedVersion": "0.3.0"}`). It never contains search data.
 
 What TraceWatch cannot control: to check a value, it has to send it to the relevant upstream source (XposedOrNot,
 LeakCheck, Hudson Rock, Have I Been Pwned, japi.rest, Discord, or the 42 profile sites for a username search). Only a 5-character hash prefix is sent for passwords.
@@ -50,3 +109,9 @@ Only look up accounts you own or are authorised to assess.
 ## Credits
 
 Hero hands in `public/hands/` are adapted from Michelangelo's *The Creation of Adam* (public domain, via Wikimedia Commons).
+
+## License
+
+TraceWatch is free software under the [GNU Affero General Public License v3.0](LICENSE). You can use, study, change
+and share it. If you run a modified version for other people, including as a website, you must offer them its
+source code under the same license.

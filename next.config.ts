@@ -13,6 +13,8 @@ const noStoreHeaders = [{ key: "Cache-Control", value: "no-store, no-cache, must
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // The Docker image ships the slim standalone server; local installs use the regular `next start`.
+  output: process.env.TRACEWATCH_STANDALONE === "1" ? "standalone" : undefined,
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

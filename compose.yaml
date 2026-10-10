@@ -1,0 +1,12 @@
+services:
+  tracewatch:
+    build: .
+    image: tracewatch:latest
+    container_name: tracewatch
+    restart: unless-stopped
+    # Reachable from this machine only. Change to "3000:3000" to expose it on your network.
+    ports:
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - path: .env.local
+        required: false

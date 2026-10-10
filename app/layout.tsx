@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { UpdateNotifier } from "@/components/UpdateNotifier";
 import { SessionProvider } from "@/lib/session";
 import "./globals.css";
 
@@ -34,7 +35,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} min-h-screen antialiased`}>
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          {children}
+          <UpdateNotifier />
+        </SessionProvider>
       </body>
     </html>
   );

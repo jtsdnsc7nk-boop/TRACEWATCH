@@ -2,6 +2,17 @@
   "repository": "https://github.com/jtsdnsc7nk-boop/TRACEWATCH",
   "releases": [
     {
+      "version": "0.4.1",
+      "date": "2026-10-10",
+      "title": "An animated CLI",
+      "changes": [
+        "The CLI intro now decrypts the cat and the TraceWatch name out of noise, sweeps a light down the logo, glitches the name in and makes the cat blink.",
+        "Animated loading wave with a live timer, results that cascade in, a risk bar that fills and counts up, and a wipe curtain when you quit.",
+        "Every visitor sees the \"Now in your terminal\" introduction once; a single browser flag remembers it, with no search data.",
+        "Turn CLI animations off with --no-anim or the NO_MOTION environment variable."
+      ]
+    },
+    {
       "version": "0.4.0",
       "date": "2026-10-10",
       "title": "Main update: the TraceWatch CLI",

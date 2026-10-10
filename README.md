@@ -120,7 +120,9 @@ npm run dev
 Leave the page and nothing remains. Verified against a production build (`next build && next start`):
 
 - **No cookies.** No response sets one. (`next dev` sets its own `__next_hmr_refresh_hash__` cookie for hot reload; production does not.)
-- **No browser storage.** No localStorage, sessionStorage, IndexedDB, Cache Storage or service worker.
+- **Nothing you search is stored in the browser.** No sessionStorage, IndexedDB, Cache Storage or service worker.
+  The only browser storage is one localStorage flag, `tracewatch:seen-cli-intro = "1"`, so the one-time
+  "Now in your terminal" popup does not come back. It holds no search data and is never sent anywhere.
 - **No browser caching of results.** Pages and every API response are sent `Cache-Control: no-store`. Discord avatars and banners
   are streamed through `/api/discord/media` with `no-store`, so the image cache never records which profiles were viewed.
 - **No back/forward restore.** If the browser restores a page from its back/forward cache, it reloads empty.

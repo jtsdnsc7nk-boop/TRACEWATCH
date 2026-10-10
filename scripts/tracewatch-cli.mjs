@@ -3,7 +3,7 @@
 //
 //   node scripts/tracewatch-cli.mjs                 interactive menu
 //   node scripts/tracewatch-cli.mjs email a@b.com   one-off scan (also: username, phone, discord, breaches)
-//   options: --url http://127.0.0.1:3000   --no-anim   --no-color
+//   options: --url http://127.0.0.1:3000   --no-anim   --no-color   (NO_COLOR / NO_MOTION are honoured too)
 //
 // It talks to a running TraceWatch server (starting one if needed), stores nothing, and wipes the
 // terminal screen and scrollback when you quit.
@@ -28,7 +28,7 @@ const positional = argv.filter((arg, index) => !arg.startsWith("--") && argv[ind
 const out = process.stdout;
 const interactive = Boolean(process.stdin.isTTY && out.isTTY);
 const useColor = out.isTTY && !hasFlag("no-color") && !process.env.NO_COLOR;
-const animate = interactive && !hasFlag("no-anim");
+const animate = interactive && !hasFlag("no-anim") && !process.env.NO_MOTION && !process.env.TRACEWATCH_NO_ANIM;
 const baseUrl = (optionValue("url") || process.env.TRACEWATCH_URL || "http://127.0.0.1:3000").replace(/\/+$/, "");
 
 // ---------- styling ----------
@@ -46,67 +46,188 @@ const inverse = sgr("7");
 
 const RISK_COLORS = { none: white, low: lime, moderate: amber, high: sgr("38;5;215"), critical: red };
 const RISK_LABELS = { none: "CLEAR", low: "LOW", moderate: "MODERATE", high: "HIGH", critical: "CRITICAL" };
+// Top-to-bottom grey ramp gives the logo the same lit-from-above feel as the website orb.
+const LOGO_RAMP = [255, 255, 254, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 243, 242, 241, 240];
+const NOISE = "░▒▓▚▞▖▗▘▝▙▟";
 
 const width = () => Math.min(out.columns || 80, 100);
-const center = (line, visible = line.length) => " ".repeat(Math.max(0, Math.floor((width() - visible) / 2))) + line;
+const pad = (visible) => " ".repeat(Math.max(0, Math.floor((width() - visible) / 2)));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const write = (text = "") => out.write(`${text}\n`);
-const rule = () => write(faint("─".repeat(width())));
 const number = (value) => new Intl.NumberFormat("en-US").format(value);
 const compact = (value) => new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+const hideCursor = () => interactive && out.write("\x1b[?25l");
+const showCursor = () => interactive && out.write("\x1b[?25h");
 
-async function banner() {
-  if (interactive) out.write("\x1b[2J\x1b[H");
-  write();
-  // Top-to-bottom grey ramp gives the logo the same lit-from-above feel as the website orb.
-  const ramp = [255, 255, 254, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 243, 242, 241, 240];
-  for (const [index, line] of ART.logo.entries()) {
-    write(center(grey(ramp[Math.min(index, ramp.length - 1)])(line), line.length));
-    if (animate) await sleep(18);
+// While a scan result is being printed, lines are collected and then cascaded onto the screen.
+let captured = null;
+const write = (text = "") => (captured ? captured.push(text) : out.write(`${text}\n`));
+const rule = () => write(faint("─".repeat(width())));
+
+async function flushCaptured() {
+  const lines = captured ?? [];
+  captured = null;
+  for (const line of lines) {
+    if (typeof line === "object" && line?.risk) {
+      await drawRiskBar(line.risk);
+      continue;
+    }
+    out.write(`${line}\n`);
+    if (animate) await sleep(7);
   }
-  write();
-  for (const [index, line] of ART.name.entries()) {
-    write(center(bold(grey(255 - index * 2)(line)), line.length));
-    if (animate) await sleep(28);
-  }
-  write();
-  const tagline = ART.tagline.toUpperCase().split("").join(" ");
-  write(center(faint(tagline), tagline.length));
-  write();
 }
 
-function riskBar(risk) {
+// ---------- banner animation ----------
+
+const nameLines = () => (width() >= 62 ? ART.name : ["T R A C E W A T C H"]);
+
+function bannerLines({ revealAt = null, frame = 0, sweep = -1, blink = false, jitter = null } = {}) {
+  const logo = ART.logo.map((line, index) =>
+    blink && index === ART.blink.row ? ART.blink.lines[0] : blink && index === ART.blink.row + 1 ? ART.blink.lines[1] : line,
+  );
+  const render = (line, row, color) => {
+    if (!revealAt) return color(line);
+    // Scramble: each glyph resolves at its own frame; until then it shows a dim noise character.
+    let text = "";
+    for (let col = 0; col < line.length; col += 1) {
+      const char = line[col];
+      if (char === " ") text += " ";
+      else if (frame >= revealAt(row, col)) text += color(char);
+      else text += faint(NOISE[(row * 7 + col * 13 + frame * 5) % NOISE.length]);
+    }
+    return text;
+  };
+  const lines = [""];
+  logo.forEach((line, row) => {
+    const color = row === sweep ? (text) => bold(white(text)) : grey(LOGO_RAMP[Math.min(row, LOGO_RAMP.length - 1)]);
+    lines.push(pad(line.length) + render(line, row, color));
+  });
+  lines.push("");
+  nameLines().forEach((line, index) => {
+    const shift = jitter ? jitter[index] : 0;
+    const color = (text) => bold(grey(255 - index * 2)(text));
+    lines.push(" ".repeat(Math.max(0, pad(line.length).length + shift)) + render(line, ART.logo.length + 1 + index, color));
+  });
+  lines.push("");
+  return lines;
+}
+
+function paint(lines) {
+  out.write("\x1b[H");
+  for (const line of lines) out.write(`\x1b[2K${line}\n`);
+}
+
+async function banner({ intro = false } = {}) {
+  if (interactive) out.write("\x1b[2J\x1b[H");
+  const tagline = ART.tagline.toUpperCase().split("").join(" ");
+
+  if (!animate || !intro) {
+    for (const line of bannerLines()) out.write(`${line}\n`);
+    out.write(`${pad(tagline.length)}${faint(tagline)}\n\n`);
+    return;
+  }
+
+  hideCursor();
+  // 1. Decrypt: glyphs resolve out of noise, top rows slightly earlier than bottom rows.
+  const frames = 20;
+  const seeds = new Map();
+  const revealAt = (row, col) => {
+    const key = `${row}:${col}`;
+    if (!seeds.has(key)) seeds.set(key, Math.floor(Math.random() * frames * 0.7 + (row / 25) * frames * 0.3));
+    return seeds.get(key);
+  };
+  for (let frame = 0; frame <= frames; frame += 1) {
+    paint(bannerLines({ revealAt, frame }));
+    await sleep(38);
+  }
+  // 2. A band of light sweeps down the cat, like the rim light on the website orb.
+  for (let row = 0; row < ART.logo.length; row += 1) {
+    paint(bannerLines({ sweep: row }));
+    await sleep(22);
+  }
+  // 3. The name glitches into place.
+  for (let i = 0; i < 4; i += 1) {
+    paint(bannerLines({ jitter: nameLines().map(() => Math.round((Math.random() - 0.5) * 4)) }));
+    await sleep(45);
+  }
+  paint(bannerLines());
+  // 4. The cat blinks.
+  await sleep(120);
+  paint(bannerLines({ blink: true }));
+  await sleep(110);
+  paint(bannerLines());
+  // 5. Tagline types itself out.
+  out.write(pad(tagline.length));
+  for (const char of tagline) {
+    out.write(faint(char));
+    if (char !== " ") await sleep(11);
+  }
+  out.write("\n\n");
+  showCursor();
+}
+
+// ---------- animated status ----------
+
+function spinner(label) {
+  if (!interactive) {
+    out.write(faint(`  ${label}...\n`));
+    return () => {};
+  }
+  const started = Date.now();
+  const bars = "▁▂▃▄▅▆▇█";
+  let frame = 0;
+  hideCursor();
+  const draw = () => {
+    let wave = "";
+    for (let i = 0; i < 14; i += 1) {
+      const level = (Math.sin((i - frame * 0.6) / 1.8) + 1) / 2;
+      wave += grey(240 + Math.round(level * 15))(bars[Math.round(level * (bars.length - 1))]);
+    }
+    const seconds = ((Date.now() - started) / 1000).toFixed(1);
+    out.write(`\r\x1b[2K  ${wave}  ${muted(label)} ${faint(`${seconds}s`)}`);
+    frame += 1;
+  };
+  draw();
+  const timer = setInterval(draw, animate ? 60 : 250);
+  return () => {
+    clearInterval(timer);
+    out.write("\r\x1b[2K");
+    showCursor();
+  };
+}
+
+function riskBarText(score, level, filledCells) {
   const size = 24;
-  const filled = Math.round((risk.score / 100) * size);
-  const color = RISK_COLORS[risk.level] ?? white;
-  return `${color("█".repeat(filled))}${faint("░".repeat(size - filled))}  ${bold(color(`${risk.score}/100 ${RISK_LABELS[risk.level] ?? ""}`))}`;
+  const color = RISK_COLORS[level] ?? white;
+  return `${color("█".repeat(filledCells))}${faint("░".repeat(size - filledCells))}  ${bold(color(`${score}/100 ${RISK_LABELS[level] ?? ""}`))}`;
+}
+
+async function drawRiskBar(risk) {
+  const target = Math.round((risk.score / 100) * 24);
+  if (!animate) {
+    out.write(`  ${riskBarText(risk.score, risk.level, target)}\n`);
+    return;
+  }
+  hideCursor();
+  const steps = 16;
+  for (let step = 1; step <= steps; step += 1) {
+    const eased = 1 - (1 - step / steps) ** 3;
+    out.write(`\r\x1b[2K  ${riskBarText(Math.round(risk.score * eased), risk.level, Math.round(target * eased))}`);
+    await sleep(22);
+  }
+  out.write("\n");
+  showCursor();
 }
 
 function printRisk(risk, title) {
   write();
   write(`  ${muted(title.toUpperCase())}`);
-  write(`  ${riskBar(risk)}`);
+  write({ risk });
   for (const factor of risk.factors.slice(0, 6)) write(`  ${faint("•")} ${factor}`);
   if (risk.recommendations.length > 0) {
     write();
     write(`  ${muted("WHAT TO DO")}`);
     for (const item of risk.recommendations.slice(0, 4)) write(`  ${faint("→")} ${item}`);
   }
-}
-
-function spinner(label) {
-  if (!interactive) {
-    write(faint(`  ${label}...`));
-    return () => {};
-  }
-  const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-  let frame = 0;
-  out.write("\x1b[?25l");
-  const timer = setInterval(() => out.write(`\r  ${white(frames[frame++ % frames.length])} ${muted(label)}   `), 80);
-  return () => {
-    clearInterval(timer);
-    out.write("\r\x1b[2K\x1b[?25h");
-  };
 }
 
 // ---------- server connection ----------
@@ -160,7 +281,10 @@ async function startServer() {
 }
 
 async function connect() {
+  const stop = spinner(`Connecting to ${baseUrl}`);
   let version = await serverVersion();
+  if (animate) await sleep(250);
+  stop();
   if (!version) {
     const local = /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(baseUrl);
     if (!local) throw new Error(`TraceWatch is not answering at ${baseUrl}.`);
@@ -222,7 +346,8 @@ async function ask(label, { mask = false } = {}) {
   return readKeys((chunk, done) => {
     if (chunk === "\u0003") {
       out.write("\n");
-      quit();
+      void quit();
+      return;
     }
     if (chunk === "\u001b") {
       out.write(`${faint("cancelled")}\n`);
@@ -251,8 +376,8 @@ async function pause() {
   if (!interactive) return;
   out.write(`\n  ${faint("press any key to return to the menu")}`);
   await readKeys((chunk, done) => {
-    if (chunk === "\u0003") quit();
-    done();
+    if (chunk === "\u0003") void quit();
+    else done();
   });
 }
 
@@ -267,7 +392,13 @@ const MENU = [
   { id: "quit", label: "Quit", hint: "wipes this terminal session" },
 ];
 
-async function menu() {
+function menuLine(item, index, active) {
+  const label = `${index + 1}  ${item.label.padEnd(18)}`;
+  const pointer = active ? white("❯") : " ";
+  return `\x1b[2K ${pointer} ${active ? inverse(white(` ${label} `)) : ` ${muted(label)} `} ${active ? muted(item.hint) : faint(item.hint)}`;
+}
+
+async function menu({ cascade = false } = {}) {
   write(`  ${muted("WHAT DO YOU WANT TO SEARCH?")}  ${faint("↑/↓ or 1-8, Enter to choose")}`);
   write();
   if (!interactive) {
@@ -278,16 +409,15 @@ async function menu() {
   }
 
   let selected = 0;
-  const render = (first) => {
-    if (!first) out.write(`\x1b[${MENU.length}A`);
-    MENU.forEach((item, index) => {
-      const active = index === selected;
-      const label = `${index + 1}  ${item.label.padEnd(18)}`;
-      out.write(`\x1b[2K  ${active ? inverse(white(` ${label} `)) : ` ${muted(label)} `} ${active ? muted(item.hint) : faint(item.hint)}\n`);
-    });
+  hideCursor();
+  for (const [index, item] of MENU.entries()) {
+    out.write(`${menuLine(item, index, index === selected)}\n`);
+    if (cascade && animate) await sleep(28);
+  }
+  const redraw = () => {
+    out.write(`\x1b[${MENU.length}A`);
+    MENU.forEach((item, index) => out.write(`${menuLine(item, index, index === selected)}\n`));
   };
-  out.write("\x1b[?25l");
-  render(true);
   const choice = await readKeys((chunk, done) => {
     if (chunk === "\u0003" || chunk === "q") return done("quit");
     if (chunk === "\u001b[A" || chunk === "k") selected = (selected + MENU.length - 1) % MENU.length;
@@ -295,10 +425,10 @@ async function menu() {
     else if (/^[1-9]$/.test(chunk) && Number(chunk) <= MENU.length) selected = Number(chunk) - 1;
     else if (chunk === "\r" || chunk === "\n") return done(MENU[selected].id);
     else return;
-    render(false);
+    redraw();
   });
-  out.write("\x1b[?25h");
-  write();
+  showCursor();
+  out.write("\n");
   return choice;
 }
 
@@ -472,42 +602,75 @@ const ACTIONS = {
   web: async () => openWeb(),
 };
 
+/** Runs a scanner, collecting its output so it can cascade onto the screen in one smooth pass. */
+async function runAction(id, value) {
+  captured = [];
+  try {
+    await ACTIONS[id](value);
+  } catch (error) {
+    write(`  ${red("✗")} ${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    await flushCaptured();
+  }
+}
+
 // ---------- lifecycle ----------
 
-function quit(code = 0) {
+let quitting = false;
+
+async function quit(code = 0) {
+  if (quitting) return;
+  quitting = true;
   if (ownedServer && ownedServer.exitCode === null) ownedServer.kill("SIGTERM");
   if (interactive) {
+    if (animate) {
+      // Wipe animation: a shaded curtain falls over the screen before it is erased for real.
+      hideCursor();
+      const rows = Math.min(out.rows || 30, 60);
+      const cols = out.columns || 80;
+      out.write("\x1b[H");
+      for (let row = 0; row < rows; row += 1) {
+        const shade = "░▒▓█"[Math.min(3, Math.floor((row / rows) * 4))];
+        out.write(`\x1b[2K${grey(236 + Math.min(4, Math.floor((row / rows) * 5)))(shade.repeat(cols))}\n`);
+        await sleep(6);
+      }
+      await sleep(60);
+    }
     // Clear the screen and the scrollback so nothing you searched stays readable in this terminal.
-    out.write("\x1b[?25h\x1b[2J\x1b[3J\x1b[H");
-    write(`  ${white("●")} ${muted("TraceWatch session wiped. Nothing was saved.")}`);
+    out.write("\x1b[2J\x1b[3J\x1b[H");
+    showCursor();
+    const message = "TraceWatch session wiped. Nothing was saved.";
+    out.write(`  ${white("●")} `);
+    for (const char of message) {
+      out.write(muted(char));
+      if (animate) await sleep(9);
+    }
+    out.write("\n");
   }
   process.exit(code);
 }
 
 async function main() {
-  await banner();
+  await banner({ intro: true });
   await connect();
 
   const [command, ...rest] = positional;
   if (command) {
-    const action = ACTIONS[command];
-    if (!action) throw new Error(`Unknown scan "${command}". Use: email, username, phone, discord or breaches.`);
+    if (!ACTIONS[command]) throw new Error(`Unknown scan "${command}". Use: email, username, phone, discord or breaches.`);
     rule();
-    await action(rest.join(" ") || undefined);
+    await runAction(command, rest.join(" ") || undefined);
     write();
     if (ownedServer) ownedServer.kill("SIGTERM");
     return;
   }
 
+  let first = true;
   for (;;) {
-    const choice = await menu();
-    if (choice === "quit") quit();
+    const choice = await menu({ cascade: first });
+    first = false;
+    if (choice === "quit") await quit();
     rule();
-    try {
-      await ACTIONS[choice]();
-    } catch (error) {
-      write(`  ${red("✗")} ${error instanceof Error ? error.message : String(error)}`);
-    }
+    await runAction(choice);
     await pause();
     await banner();
     write(`  ${white("●")} ${muted("connected to")} ${white(baseUrl)}`);
@@ -515,9 +678,10 @@ async function main() {
   }
 }
 
-process.on("SIGINT", () => quit(130));
+process.on("SIGINT", () => void quit(130));
 main().catch((error) => {
-  write(`  ${red("✗")} ${error instanceof Error ? error.message : String(error)}`);
+  showCursor();
+  out.write(`  ${red("✗")} ${error instanceof Error ? error.message : String(error)}\n`);
   if (ownedServer && ownedServer.exitCode === null) ownedServer.kill("SIGTERM");
   process.exit(1);
 });

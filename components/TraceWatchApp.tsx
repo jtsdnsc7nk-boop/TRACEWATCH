@@ -293,7 +293,7 @@ export function TraceWatchApp() {
           <br />
           Only look up accounts you own or have permission to assess. Results are indicators, not proof.
           <br />
-          No cookies · no storage · leave the page and everything is gone. Searched values are forwarded to the sources
+          No cookies · nothing you search is stored · leave the page and it is gone. Searched values are forwarded to the sources
           above, which have their own privacy policies.
         </footer>
       </motion.div>

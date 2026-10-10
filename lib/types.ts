@@ -126,6 +126,26 @@ export interface CatalogueResult {
   offset: number;
 }
 
+export type UsernameCategory = "social" | "developer" | "gaming" | "creative" | "community";
+
+export interface UsernameSiteResult {
+  id: string;
+  name: string;
+  category: UsernameCategory;
+  profileUrl: string;
+  /** found: profile exists · not_found: confirmed absent · unknown: site blocked or errored · invalid: name not allowed there */
+  status: "found" | "not_found" | "unknown" | "invalid";
+  detail?: string;
+}
+
+export interface UsernameScanResult {
+  username: string;
+  results: UsernameSiteResult[];
+  found: number;
+  checked: number;
+  durationMs: number;
+}
+
 export interface DashboardSeriesPoint {
   label: string;
   breaches: number;

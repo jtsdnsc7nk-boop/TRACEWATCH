@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowUpRight, AtSign, Hash, KeyRound, LayoutDashboard, Lock, Phone, Rss } from "lucide-react";
+import { ArrowUpRight, AtSign, Hash, KeyRound, LayoutDashboard, Lock, Phone, Rss, UserSearch } from "lucide-react";
 import Link from "next/link";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import type { CatalogueResult } from "@/lib/types";
@@ -14,9 +14,11 @@ import { DiscordPanel } from "@/components/DiscordPanel";
 import { EmailPanel } from "@/components/EmailPanel";
 import { PasswordPanel } from "@/components/PasswordPanel";
 import { PhonePanel } from "@/components/PhonePanel";
+import { UsernamePanel } from "@/components/UsernamePanel";
 
 const TABS = [
   { id: "email", label: "Email", icon: AtSign, blurb: "Find which known data breaches and pastes contain an email address." },
+  { id: "username", label: "Username", icon: UserSearch, blurb: "Find which of 42 sites have a public profile with this username." },
   { id: "password", label: "Password", icon: KeyRound, blurb: "Check a password against breach corpora without it leaving your browser." },
   { id: "phone", label: "Phone", icon: Phone, blurb: "Validate a number and identify its region, line type and abuse potential." },
   { id: "discord", label: "Discord", icon: Hash, blurb: "Inspect the public signals of a Discord account from its user ID." },
@@ -274,6 +276,7 @@ export function TraceWatchApp() {
                 hidden={tab.id !== active}
               >
                 {tab.id === "email" ? <EmailPanel /> : null}
+                {tab.id === "username" ? <UsernamePanel /> : null}
                 {tab.id === "password" ? <PasswordPanel /> : null}
                 {tab.id === "phone" ? <PhonePanel /> : null}
                 {tab.id === "discord" ? <DiscordPanel /> : null}
@@ -284,7 +287,7 @@ export function TraceWatchApp() {
         </div>
 
         <footer className="mt-8 text-center font-mono text-[10px] uppercase leading-relaxed tracking-[0.2em] text-neutral-600">
-          Have I Been Pwned · XposedOrNot · LeakCheck · Hudson Rock · Pwned Passwords · libphonenumber · Discord API
+          Have I Been Pwned · XposedOrNot · LeakCheck · Hudson Rock · 42 profile sites · Pwned Passwords · libphonenumber · Discord API
           <br />
           Only look up accounts you own or have permission to assess. Results are indicators, not proof.
           <br />

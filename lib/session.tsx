@@ -3,7 +3,7 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { RiskLevel } from "@/lib/types";
 
-export type ScanKind = "email" | "password" | "phone" | "discord";
+export type ScanKind = "email" | "username" | "password" | "phone" | "discord";
 
 export interface SessionScan {
   id: number;

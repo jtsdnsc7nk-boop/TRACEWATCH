@@ -7,6 +7,7 @@ Zero-persistence breach and account exposure console built on Next.js 15 (App Ro
 | Tab | What it does | Source |
 | --- | --- | --- |
 | Email | Breaches, pastes and infostealer infections for an address, merged and de-duplicated across sources, with an exposure score | XposedOrNot, LeakCheck (public), Hudson Rock Cavalier (keyless); Have I Been Pwned when `HIBP_API_KEY` is set; thin records enriched from the HIBP catalogue |
+| Username | Which of 42 sites (social, developer, gaming, creative, community) have a public profile with a username; each detector is verified against known-real and known-missing names, and blocked or ambiguous answers are reported as unknown, never as found | Direct public profile checks |
 | Password | Checks a password against breach corpora using k-anonymity; only a 5-character SHA-1 prefix leaves the browser | Pwned Passwords |
 | Phone | Validity, region, line type and formats | libphonenumber (offline) |
 | Discord | Account age, username, display name, avatar, banner, badges, server tag and avatar decoration | Discord API when `DISCORD_BOT_TOKEN` is set, otherwise the public japi.rest mirror |
@@ -41,7 +42,7 @@ Leave the page and nothing remains. Verified against a production build (`next b
 - **Session activity** on the dashboard is React state only (masked targets) and is gone on reload.
 
 What TraceWatch cannot control: to check a value, it has to send it to the relevant upstream source (XposedOrNot,
-LeakCheck, Hudson Rock, Have I Been Pwned, japi.rest or Discord). Only a 5-character hash prefix is sent for passwords.
+LeakCheck, Hudson Rock, Have I Been Pwned, japi.rest, Discord, or the 42 profile sites for a username search). Only a 5-character hash prefix is sent for passwords.
 Those services run under their own privacy policies.
 
 Only look up accounts you own or are authorised to assess.

@@ -14,6 +14,7 @@ import {
   Phone,
   RefreshCw,
   Trash2,
+  UserSearch,
 } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
@@ -28,6 +29,7 @@ import { ErrorBanner } from "@/components/ui";
 
 const KIND_META: Record<ScanKind, { label: string; icon: typeof AtSign; tab: string }> = {
   email: { label: "Email", icon: AtSign, tab: "email" },
+  username: { label: "Username", icon: UserSearch, tab: "username" },
   password: { label: "Password", icon: KeyRound, tab: "password" },
   phone: { label: "Phone", icon: Phone, tab: "phone" },
   discord: { label: "Discord", icon: Hash, tab: "discord" },

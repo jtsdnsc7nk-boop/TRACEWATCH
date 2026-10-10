@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 # TraceWatch for macOS and Linux:  ./start.sh          start (installs and builds on first run)
 #                                  ./start.sh update   pull the latest version, then start
+#                                  ./start.sh cli      open the TraceWatch CLI in this terminal
 cd "$(dirname "$0")" || exit 1
 
 if ! command -v node >/dev/null 2>&1; then

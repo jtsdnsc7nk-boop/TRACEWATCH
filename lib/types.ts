@@ -196,6 +196,8 @@ export interface Release {
   changes: string[];
   /** Optional call to action shown with the release, e.g. a download. Only https links are honoured. */
   link?: { label: string; url: string };
+  /** Spotlight for a major release, shown as a large card at the top of the release notes. */
+  featured?: { title: string; description: string; command?: string; action?: "launch-cli" };
 }
 
 export interface UpdateStatus {

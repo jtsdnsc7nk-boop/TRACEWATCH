@@ -2,6 +2,24 @@
   "repository": "https://github.com/jtsdnsc7nk-boop/TRACEWATCH",
   "releases": [
     {
+      "version": "0.4.0",
+      "date": "2026-10-10",
+      "title": "Main update: the TraceWatch CLI",
+      "featured": {
+        "title": "TraceWatch, now in your terminal",
+        "description": "A full command-line app with the TraceWatch cat in ASCII art. Pick what to search with the arrow keys: email exposure, usernames on 42 sites, passwords, phone numbers, Discord accounts or the breach catalogue. When you quit, it wipes the terminal so nothing you searched stays on screen.",
+        "command": "./start.sh cli",
+        "action": "launch-cli"
+      },
+      "changes": [
+        "New Open CLI button in the header opens the CLI in a terminal window on this computer.",
+        "Run it any time with ./start.sh cli, start.bat cli or npm run cli; one-off scans work too, e.g. npm run cli -- username torvalds.",
+        "Password checks in the CLI hash locally and send only 5 characters, exactly like the website.",
+        "The CLI starts the TraceWatch server for you if it is not already running.",
+        "Big releases can now show a featured card like this one."
+      ]
+    },
+    {
       "version": "0.3.1",
       "date": "2026-10-10",
       "title": "4K wallpapers",

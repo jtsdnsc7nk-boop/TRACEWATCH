@@ -4,8 +4,15 @@
     {
       "name": "tracewatch",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "3210"],
-      "port": 3210
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "3210"
+      ],
+      "port": 3210,
+      "url": "http://127.0.0.1:3210"
     }
   ]
 }

@@ -5,7 +5,9 @@ import { ExternalLink, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { UpdateStatus } from "@/lib/types";
 import { requestJson } from "@/lib/client";
+import asciiArt from "@/lib/ascii-art.json";
 import { formatDate } from "@/lib/utils";
+import { CliLaunchButton } from "@/components/CliLaunchButton";
 import { Logo } from "@/components/Logo";
 
 const RECHECK_MS = 30 * 60 * 1000;
@@ -150,7 +152,7 @@ export function UpdateNotifier() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 12, scale: 0.98 }}
               transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/15 bg-neutral-950/90 shadow-[0_40px_120px_rgba(0,0,0,0.8)] backdrop-blur-2xl"
+              className="flex max-h-[88vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-white/15 bg-neutral-950/90 shadow-[0_40px_120px_rgba(0,0,0,0.8)] backdrop-blur-2xl"
             >
               <div className="flex items-center gap-4 border-b border-white/[0.08] p-5">
                 <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.06] text-white">
@@ -168,7 +170,8 @@ export function UpdateNotifier() {
 
               <div className="flex-1 space-y-5 overflow-y-auto p-5">
                 {status.whatsNew.map((release) => (
-                  <section key={release.version}>
+                  <section key={release.version} className="flex flex-col gap-1">
+                    {release.featured ? <FeaturedCard featured={release.featured} version={release.version} /> : null}
                     <div className="flex items-baseline justify-between gap-3">
                       <h3 className="text-sm font-semibold text-neutral-100">{release.title}</h3>
                       <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
@@ -221,5 +224,41 @@ export function UpdateNotifier() {
         ) : null}
       </AnimatePresence>
     </>
+  );
+}
+
+function FeaturedCard({ featured, version }: { featured: NonNullable<UpdateStatus["whatsNew"][number]["featured"]>; version: string }) {
+  return (
+    <div className="mb-4 overflow-hidden rounded-xl border border-white/15 bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <div className="flex items-center gap-1.5 border-b border-white/10 px-3 py-2">
+        <span className="size-2 rounded-full bg-white/20" aria-hidden />
+        <span className="size-2 rounded-full bg-white/20" aria-hidden />
+        <span className="size-2 rounded-full bg-white/20" aria-hidden />
+        <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-500">
+          Main update · v{version}
+        </span>
+      </div>
+      <div className="flex flex-col items-center gap-3 px-4 pt-4 pb-5 text-center">
+        <pre
+          aria-hidden
+          className="bg-gradient-to-b from-white to-neutral-500 bg-clip-text font-mono text-[5px] leading-[5px] text-transparent sm:text-[6px] sm:leading-[6px]"
+        >
+          {asciiArt.logo.join("\n")}
+        </pre>
+        <pre aria-hidden className="font-mono text-[4.5px] leading-[5px] text-white sm:text-[5.5px] sm:leading-[6px]">
+          {asciiArt.name.join("\n")}
+        </pre>
+        <h3 className="mt-1 text-lg font-semibold tracking-tight text-white">{featured.title}</h3>
+        <p className="max-w-md text-sm leading-relaxed text-neutral-400">{featured.description}</p>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {featured.action === "launch-cli" ? <CliLaunchButton variant="solid" /> : null}
+          {featured.command ? (
+            <code className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 font-mono text-[11px] text-neutral-300">
+              {featured.command}
+            </code>
+          ) : null}
+        </div>
+      </div>
+    </div>
   );
 }

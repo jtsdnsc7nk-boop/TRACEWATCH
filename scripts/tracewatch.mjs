@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // TraceWatch launcher: installs, builds and starts a production instance on any OS.
-//   node scripts/tracewatch.mjs [start|update] [--port 3000] [--host 127.0.0.1] [--rebuild] [--no-open]
+//   node scripts/tracewatch.mjs [start|update|cli] [--port 3000] [--host 127.0.0.1] [--rebuild] [--no-open]
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -131,7 +131,8 @@ async function start() {
     cwd: ROOT,
     stdio: "inherit",
     shell: IS_WINDOWS,
-    env: { ...process.env, NODE_ENV: "production" },
+    // TRACEWATCH_HOST tells the server whether it is private to this machine (see lib/server/terminal.ts).
+    env: { ...process.env, NODE_ENV: "production", TRACEWATCH_HOST: host },
   });
   const forward = (signal) => child.kill(signal);
   process.on("SIGINT", forward);
@@ -150,6 +151,13 @@ if (command === "update") {
   await start();
 } else if (command === "start") {
   await start();
+} else if (command === "cli") {
+  // Hand the terminal over to the CLI; it connects to (or starts) the server on the chosen port.
+  const cli = spawn(process.execPath, [path.join(ROOT, "scripts", "tracewatch-cli.mjs"), "--url", `http://127.0.0.1:${port}`], {
+    cwd: ROOT,
+    stdio: "inherit",
+  });
+  cli.on("exit", (code) => process.exit(code ?? 0));
 } else {
-  fatal(`Unknown command "${command}". Use "start" or "update".`);
+  fatal(`Unknown command "${command}". Use "start", "update" or "cli".`);
 }

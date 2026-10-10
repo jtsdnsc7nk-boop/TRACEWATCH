@@ -1,6 +1,7 @@
 @echo off
 REM TraceWatch for Windows:  start.bat          start (installs and builds on first run)
 REM                         start.bat update   pull the latest version, then start
+REM                         start.bat cli      open the TraceWatch CLI in this window
 cd /d "%~dp0"
 
 where node >nul 2>nul

@@ -29,6 +29,27 @@ an update. Options: `--port 4000`, `--host 0.0.0.0` (expose on your network; the
 
 No Node.js on Windows? `winget install OpenJS.NodeJS.LTS`. On macOS: `brew install node`.
 
+### CLI
+
+TraceWatch also runs in your terminal, with the cat in ASCII art and an arrow-key menu for every scanner:
+
+| System | Open the CLI |
+| --- | --- |
+| Windows | `start.bat cli` |
+| macOS / Linux | `./start.sh cli` |
+| Any, with npm | `npm run cli` |
+
+One-off scans work too: `npm run cli -- email you@example.com`, `npm run cli -- username torvalds`
+(also `phone`, `discord`, `breaches`). Password checks are interactive only, so a password never lands in your shell
+history. The CLI starts the server if it is not running, and when you quit it clears the screen and scrollback.
+
+The **Open CLI** button in the web app opens the same CLI in a new terminal window (Terminal on macOS, Command
+Prompt on Windows, or the first of Konsole, GNOME Terminal, GNOME Console, Xfce Terminal, kitty, Alacritty,
+WezTerm, foot, Tilix or xterm on Linux; set `TERMINAL` to choose). It only works when the page is opened as
+`localhost` on the machine running TraceWatch: requests need a custom header that other websites cannot send, and
+the button is disabled when the server is started with `--host` for the network, inside Docker, or with
+`TRACEWATCH_DISABLE_CLI_LAUNCH=1`.
+
 ### Docker
 
 ```bash
@@ -45,6 +66,7 @@ Copy `.env.example` to `.env.local` (the start scripts do this for you). Every k
 - `HIBP_API_KEY` adds Have I Been Pwned account search.
 - `DISCORD_BOT_TOKEN` makes Discord lookups go straight to Discord.
 - `TRACEWATCH_UPDATE_CHECK=off` disables the update check.
+- `TRACEWATCH_DISABLE_CLI_LAUNCH=1` hides nothing but makes the Open CLI button refuse to open windows.
 
 ## Updates
 

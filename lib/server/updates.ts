@@ -41,12 +41,25 @@ function sanitizeRelease(raw: unknown): Release | null {
     : [];
   const link = value.link as { label?: unknown; url?: unknown } | undefined;
   const linkUrl = typeof link?.url === "string" && /^https:\/\/[^\s]+$/.test(link.url) ? link.url : null;
+  const featured = value.featured as Record<string, unknown> | undefined;
+  const featuredTitle = text(featured?.title, 80);
   return {
     version: value.version,
     date: text(value.date, 20),
     title: text(value.title, 120) || `Version ${value.version}`,
     changes,
     ...(linkUrl ? { link: { label: text(link?.label, 40) || "Learn more", url: linkUrl } } : {}),
+    ...(featuredTitle
+      ? {
+          featured: {
+            title: featuredTitle,
+            description: text(featured?.description, 400),
+            ...(text(featured?.command, 80) ? { command: text(featured?.command, 80) } : {}),
+            // Remote notes may only ask for actions this build already knows; nothing else is executable.
+            ...(featured?.action === "launch-cli" ? { action: "launch-cli" as const } : {}),
+          },
+        }
+      : {}),
   };
 }
 

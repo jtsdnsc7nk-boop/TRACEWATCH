@@ -8,6 +8,7 @@ import type { CatalogueResult } from "@/lib/types";
 import { requestJson } from "@/lib/client";
 import { cn, formatCompact, formatNumber } from "@/lib/utils";
 import { Backdrop } from "@/components/Backdrop";
+import { CliLaunchButton } from "@/components/CliLaunchButton";
 import { Logo } from "@/components/Logo";
 import { BreachFeed } from "@/components/BreachFeed";
 import { DiscordPanel } from "@/components/DiscordPanel";
@@ -92,6 +93,7 @@ export function TraceWatchApp() {
 
         <div className="flex items-start gap-10">
           <div className="flex items-center gap-2">
+            <CliLaunchButton className="hidden sm:inline-flex" />
             <Link
               href="/dashboard"
               className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-950 shadow-[0_0_24px_rgba(255,255,255,0.12)] transition hover:bg-neutral-200"

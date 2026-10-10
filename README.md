@@ -1,5 +1,7 @@
 # TraceWatch
 
+![TraceWatch](wallpapers/preview.jpg)
+
 A self-hosted, zero-persistence OSINT console: see which breaches, infostealer logs and websites expose an email
 address or username, check passwords safely, and inspect phone numbers and Discord accounts. It runs on your own
 machine, needs no account, sets no cookies, and forgets everything when you leave the page.
@@ -106,9 +108,20 @@ Those services run under their own privacy policies.
 
 Only look up accounts you own or are authorised to assess.
 
+## Wallpapers
+
+Free 4K (3840×2160) desktop wallpapers made from the TraceWatch background:
+
+| Preview | Download |
+| --- | --- |
+| Cat logo between the hands | [tracewatch-4k-logo.png](wallpapers/tracewatch-4k-logo.png) |
+| Hands only | [tracewatch-4k-hands.png](wallpapers/tracewatch-4k-hands.png) |
+| Clean background | [tracewatch-4k-clean.png](wallpapers/tracewatch-4k-clean.png) |
+
 ## Credits
 
-Hero hands in `public/hands/` are adapted from Michelangelo's *The Creation of Adam* (public domain, via Wikimedia Commons).
+The hands in `public/hands/` and `wallpapers/` are adapted from Michelangelo's *The Creation of Adam* (public
+domain, via Wikimedia Commons).
 
 ## License
 

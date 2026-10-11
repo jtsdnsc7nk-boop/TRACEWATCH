@@ -2,6 +2,16 @@
   "repository": "https://github.com/jtsdnsc7nk-boop/TRACEWATCH",
   "releases": [
     {
+      "version": "0.4.2",
+      "date": "2026-10-11",
+      "title": "A CLI that fits any window",
+      "changes": [
+        "The CLI picks the biggest header that fits your window: the full cat and name, the cat with a compact name, or a small two-line cat.",
+        "Resizing or moving the window redraws everything at the new size and keeps your menu selection, what you were typing and the results you were reading.",
+        "Resizing during the intro skips straight to the finished banner instead of smearing animation frames down the screen."
+      ]
+    },
+    {
       "version": "0.4.1",
       "date": "2026-10-10",
       "title": "An animated CLI",

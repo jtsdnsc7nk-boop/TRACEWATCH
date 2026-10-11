@@ -61,10 +61,29 @@ const compact = (value) => new Intl.NumberFormat("en-US", { notation: "compact",
 const hideCursor = () => interactive && out.write("\x1b[?25l");
 const showCursor = () => interactive && out.write("\x1b[?25h");
 
+// What is on screen below the header, so a resize can redraw it at the new size. It lives in memory
+// only and is dropped on the next screen or when the CLI exits.
+const view = { body: [], menu: null, prompt: null, footer: null, intro: false };
+
 // While a scan result is being printed, lines are collected and then cascaded onto the screen.
 let captured = null;
-const write = (text = "") => (captured ? captured.push(text) : out.write(`${text}\n`));
-const rule = () => write(faint("─".repeat(width())));
+const write = (text = "") => {
+  if (captured) captured.push(text);
+  else {
+    out.write(`${text}\n`);
+    view.body.push(text);
+  }
+};
+// Dividers are stored as a marker and drawn at the current width, so they never wrap after a resize.
+const RULE = "\u0000rule";
+const ruleText = () => faint("─".repeat(width()));
+const rule = () => {
+  if (captured) captured.push(ruleText());
+  else {
+    out.write(`${ruleText()}\n`);
+    view.body.push(RULE);
+  }
+};
 
 async function flushCaptured() {
   const lines = captured ?? [];
@@ -72,16 +91,52 @@ async function flushCaptured() {
   for (const line of lines) {
     if (typeof line === "object" && line?.risk) {
       await drawRiskBar(line.risk);
+      view.body.push(`  ${riskBarText(line.risk.score, line.risk.level, Math.round((line.risk.score / 100) * riskBarSize()))}`);
       continue;
     }
     out.write(`${line}\n`);
-    if (animate) await sleep(7);
+    view.body.push(line);
+    if (animate && !resizedDuring) await sleep(7);
   }
 }
 
 // ---------- banner animation ----------
 
-const nameLines = () => (width() >= 62 ? ART.name : ["T R A C E W A T C H"]);
+const rows = () => out.rows || 24;
+// Lines the menu needs below the header: connection line, title, eight items and some breathing room.
+const MENU_ROOM = 14;
+const SPACED_NAME = "T R A C E W A T C H";
+
+/** Picks the biggest header that fits the window, so nothing scrolls while the intro animates. */
+function headerVariant() {
+  const full = ART.logo.length + ART.name.length + 6;
+  const medium = ART.logo.length + 5;
+  if (columns() >= 62 && rows() >= full + MENU_ROOM) return "full";
+  if (columns() >= 40 && rows() >= medium + MENU_ROOM) return "logo";
+  if (columns() >= 34 && rows() >= 4 + 10) return "mini";
+  return "tiny";
+}
+
+const nameLines = () => (headerVariant() === "full" ? ART.name : [SPACED_NAME]);
+
+function taglineText() {
+  return ART.tagline.toUpperCase().split("").join(" ");
+}
+
+/** The static header for small windows: a two-line cat beside the name, or just the name. */
+function compactHeader(variant) {
+  if (variant === "tiny") return ["", `  ${bold(white("TRACEWATCH"))} ${faint(fit(ART.tagline, columns() - 14))}`, ""];
+  const cat = ["▄▄███▄▄", "(=^.^=)"];
+  const text = [bold(white(fit(SPACED_NAME, columns() - 12))), faint(fit(ART.tagline, columns() - 12))];
+  return ["", `  ${white(cat[0])}  ${text[0]}`, `  ${grey(250)(cat[1])}  ${text[1]}`, ""];
+}
+
+function headerLines() {
+  const variant = headerVariant();
+  if (variant === "mini" || variant === "tiny") return compactHeader(variant);
+  const tagline = taglineText();
+  return [...bannerLines(), `${pad(tagline.length)}${faint(fit(tagline, columns() - 1))}`, ""];
+}
 
 function bannerLines({ revealAt = null, frame = 0, sweep = -1, blink = false, jitter = null } = {}) {
   const logo = ART.logo.map((line, index) =>
@@ -119,53 +174,89 @@ function paint(lines) {
   for (const line of lines) out.write(`\x1b[2K${line}\n`);
 }
 
-async function banner({ intro = false } = {}) {
-  if (interactive) out.write("\x1b[2J\x1b[H");
-  const tagline = ART.tagline.toUpperCase().split("").join(" ");
+let resizedDuring = false;
 
-  if (!animate || !intro) {
-    for (const line of bannerLines()) out.write(`${line}\n`);
-    out.write(`${pad(tagline.length)}${faint(tagline)}\n\n`);
+async function banner({ intro = false } = {}) {
+  view.body = [];
+  view.menu = null;
+  view.prompt = null;
+  view.footer = null;
+  if (interactive) out.write("\x1b[2J\x1b[3J\x1b[H");
+  const variant = headerVariant();
+
+  if (!animate || !intro || variant === "mini" || variant === "tiny") {
+    for (const line of headerLines()) out.write(`${line}\n`);
     return;
   }
 
+  view.intro = true;
+  resizedDuring = false;
   hideCursor();
-  // 1. Decrypt: glyphs resolve out of noise, top rows slightly earlier than bottom rows.
-  const frames = 20;
-  const seeds = new Map();
-  const revealAt = (row, col) => {
-    const key = `${row}:${col}`;
-    if (!seeds.has(key)) seeds.set(key, Math.floor(Math.random() * frames * 0.7 + (row / 25) * frames * 0.3));
-    return seeds.get(key);
+  const step = async (lines, ms) => {
+    if (resizedDuring) return false;
+    paint(lines);
+    await sleep(ms);
+    return !resizedDuring;
   };
-  for (let frame = 0; frame <= frames; frame += 1) {
-    paint(bannerLines({ revealAt, frame }));
-    await sleep(38);
+  run: {
+    // 1. Decrypt: glyphs resolve out of noise, top rows slightly earlier than bottom rows.
+    const frames = 20;
+    const seeds = new Map();
+    const revealAt = (row, col) => {
+      const key = `${row}:${col}`;
+      if (!seeds.has(key)) seeds.set(key, Math.floor(Math.random() * frames * 0.7 + (row / 25) * frames * 0.3));
+      return seeds.get(key);
+    };
+    for (let frame = 0; frame <= frames; frame += 1) if (!(await step(bannerLines({ revealAt, frame }), 38))) break run;
+    // 2. A band of light sweeps down the cat, like the rim light on the website orb.
+    for (let row = 0; row < ART.logo.length; row += 1) if (!(await step(bannerLines({ sweep: row }), 22))) break run;
+    // 3. The name glitches into place.
+    for (let i = 0; i < 4; i += 1) {
+      if (!(await step(bannerLines({ jitter: nameLines().map(() => Math.round((Math.random() - 0.5) * 4)) }), 45))) break run;
+    }
+    // 4. The cat blinks.
+    if (!(await step(bannerLines(), 120))) break run;
+    if (!(await step(bannerLines({ blink: true }), 110))) break run;
+    paint(bannerLines());
+    // 5. Tagline types itself out.
+    const tagline = taglineText();
+    out.write(pad(tagline.length));
+    for (const char of tagline) {
+      if (resizedDuring) break run;
+      out.write(faint(char));
+      if (char !== " ") await sleep(11);
+    }
+    out.write("\n\n");
   }
-  // 2. A band of light sweeps down the cat, like the rim light on the website orb.
-  for (let row = 0; row < ART.logo.length; row += 1) {
-    paint(bannerLines({ sweep: row }));
-    await sleep(22);
-  }
-  // 3. The name glitches into place.
-  for (let i = 0; i < 4; i += 1) {
-    paint(bannerLines({ jitter: nameLines().map(() => Math.round((Math.random() - 0.5) * 4)) }));
-    await sleep(45);
-  }
-  paint(bannerLines());
-  // 4. The cat blinks.
-  await sleep(120);
-  paint(bannerLines({ blink: true }));
-  await sleep(110);
-  paint(bannerLines());
-  // 5. Tagline types itself out.
-  out.write(pad(tagline.length));
-  for (const char of tagline) {
-    out.write(faint(char));
-    if (char !== " ") await sleep(11);
-  }
-  out.write("\n\n");
+  view.intro = false;
   showCursor();
+  // The window changed size mid-animation: finish with the static header at the new size.
+  if (resizedDuring) {
+    out.write("\x1b[2J\x1b[3J\x1b[H");
+    for (const line of headerLines()) out.write(`${line}\n`);
+  }
+}
+
+/** Redraws the whole current screen for the new window size: header, content, then the live control. */
+function redraw() {
+  if (!interactive) return;
+  out.write("\x1b[2J\x1b[3J\x1b[H");
+  for (const line of headerLines()) out.write(`${line}\n`);
+  for (const line of view.body) out.write(`${line === RULE ? ruleText() : line}\n`);
+  if (view.menu) MENU.forEach((item, index) => out.write(`${menuLine(item, index, index === view.menu.selected)}\n`));
+  if (view.prompt) out.write(`${promptPrefix(view.prompt.label)}${view.prompt.mask ? "•".repeat(view.prompt.value.length) : view.prompt.value}`);
+  if (view.footer) out.write(`\n  ${faint(view.footer)}`);
+}
+
+let resizeTimer = null;
+function onResize() {
+  if (view.intro) {
+    resizedDuring = true;
+    return;
+  }
+  clearTimeout(resizeTimer);
+  // Terminals send a burst of resize events while a window is dragged; redraw once it settles.
+  resizeTimer = setTimeout(redraw, 70);
 }
 
 // ---------- animated status ----------
@@ -345,10 +436,17 @@ async function readLine() {
 }
 
 /** Prompts for a line. Esc cancels (returns null). With mask, typed characters are shown as dots. */
+const promptPrefix = (label) => `  ${white("›")} ${label} `;
+
 async function ask(label, { mask = false } = {}) {
-  out.write(`  ${white("›")} ${label} `);
+  out.write(promptPrefix(label));
   if (!interactive) return readLine();
-  let value = "";
+  view.prompt = { label, value: "", mask };
+  const finish = (value) => {
+    view.body.push(`${promptPrefix(label)}${value === null ? faint("cancelled") : mask ? "•".repeat(value.length) : value}`);
+    view.prompt = null;
+    return value;
+  };
   return readKeys((chunk, done) => {
     if (chunk === "\u0003") {
       out.write("\n");
@@ -357,21 +455,21 @@ async function ask(label, { mask = false } = {}) {
     }
     if (chunk === "\u001b") {
       out.write(`${faint("cancelled")}\n`);
-      return done(null);
+      return done(finish(null));
     }
     if (chunk.startsWith("\u001b")) return; // arrow keys and other escape sequences
     for (const char of chunk) {
       if (char === "\r" || char === "\n") {
         out.write("\n");
-        return done(value);
+        return done(finish(view.prompt.value));
       }
       if (char === "\u007f" || char === "\b") {
-        if (value.length > 0) {
-          value = value.slice(0, -1);
+        if (view.prompt.value.length > 0) {
+          view.prompt.value = view.prompt.value.slice(0, -1);
           out.write("\b \b");
         }
       } else if (char >= " ") {
-        value += char;
+        view.prompt.value += char;
         out.write(mask ? "•" : char);
       }
     }
@@ -380,7 +478,8 @@ async function ask(label, { mask = false } = {}) {
 
 async function pause() {
   if (!interactive) return;
-  out.write(`\n  ${faint("press any key to return to the menu")}`);
+  view.footer = "press any key to return to the menu";
+  out.write(`\n  ${faint(view.footer)}`);
   await readKeys((chunk, done) => {
     if (chunk === "\u0003") void quit();
     else done();
@@ -417,25 +516,27 @@ async function menu({ cascade = false } = {}) {
     return MENU[index]?.id ?? "quit";
   }
 
-  let selected = 0;
+  view.menu = { selected: 0 };
   hideCursor();
   for (const [index, item] of MENU.entries()) {
-    out.write(`${menuLine(item, index, index === selected)}\n`);
+    out.write(`${menuLine(item, index, index === view.menu.selected)}\n`);
     if (cascade && animate) await sleep(28);
   }
   const redraw = () => {
     out.write(`\x1b[${MENU.length}A`);
-    MENU.forEach((item, index) => out.write(`${menuLine(item, index, index === selected)}\n`));
+    MENU.forEach((item, index) => out.write(`${menuLine(item, index, index === view.menu.selected)}\n`));
   };
   const choice = await readKeys((chunk, done) => {
     if (chunk === "\u0003" || chunk === "q") return done("quit");
-    if (chunk === "\u001b[A" || chunk === "k") selected = (selected + MENU.length - 1) % MENU.length;
-    else if (chunk === "\u001b[B" || chunk === "j") selected = (selected + 1) % MENU.length;
-    else if (/^[1-9]$/.test(chunk) && Number(chunk) <= MENU.length) selected = Number(chunk) - 1;
-    else if (chunk === "\r" || chunk === "\n") return done(MENU[selected].id);
+    const menuState = view.menu;
+    if (chunk === "\u001b[A" || chunk === "k") menuState.selected = (menuState.selected + MENU.length - 1) % MENU.length;
+    else if (chunk === "\u001b[B" || chunk === "j") menuState.selected = (menuState.selected + 1) % MENU.length;
+    else if (/^[1-9]$/.test(chunk) && Number(chunk) <= MENU.length) menuState.selected = Number(chunk) - 1;
+    else if (chunk === "\r" || chunk === "\n") return done(MENU[menuState.selected].id);
     else return;
     redraw();
   });
+  view.menu = null;
   showCursor();
   out.write("\n");
   return choice;
@@ -688,6 +789,7 @@ async function main() {
 }
 
 process.on("SIGINT", () => void quit(130));
+if (interactive) out.on("resize", onResize);
 main().catch((error) => {
   showCursor();
   out.write(`  ${red("✗")} ${error instanceof Error ? error.message : String(error)}\n`);
